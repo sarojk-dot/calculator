@@ -1,62 +1,220 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en" data-theme="dark"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<link rel="manifest" href="manifest.json">
 <title>Calculator</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;justify-content:center;align-items:center;background:#111;font-family:sans-serif}
-.calc{width:min(92vw,360px);background:#1c1c1e;border-radius:20px;padding:16px}
-#screen{background:#000;color:#fff;border-radius:12px;padding:16px;margin-bottom:12px;text-align:right;min-height:90px}
-#expr{color:#888;font-size:18px;min-height:24px;word-wrap:break-word}
-#out{font-size:40px;word-wrap:break-word}
-.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-button{padding:18px 0;font-size:22px;border:0;border-radius:14px;background:#333;color:#fff}
-button:active{opacity:.6}
-.op{background:#ff9f0a}
-.fn{background:#a5a5a5;color:#000}
-.eq{background:#30d158;grid-column:span 2}
-</style><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#111111"></head><body>
-<div class="calc">
-<div id="screen"><div id="expr"></div><div id="out">0</div></div>
-<div class="keys" id="keys"></div>
+:root{--bg:#111;--panel:#1c1c1e;--key:#2c2c2e;--fn:#5a5a5c;--tx:#fff;--sub:#8e8e93;--ac:#ff9f0a;--eq:#30d158}
+[data-theme=light]{--bg:#f2f2f7;--panel:#fff;--key:#e5e5ea;--fn:#c7c7cc;--tx:#000;--sub:#6c6c70}
+[data-theme=amoled]{--bg:#000;--panel:#0d0d0d;--key:#1a1a1a;--fn:#3a3a3a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font-family:system-ui,sans-serif}
+body{display:flex;justify-content:center}
+.app{width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom)}
+.top{display:flex;gap:6px;overflow-x:auto;padding:10px 0;flex:none}
+.pill{flex:none;border:0;border-radius:20px;padding:8px 14px;background:var(--key);color:var(--tx);font-size:14px}
+.pill.on{background:var(--ac);color:#000}
+.view{display:none;flex:1;min-height:0;flex-direction:column;overflow-y:auto}
+.view.on{display:flex}
+.disp{margin-top:auto;padding:8px 6px;position:relative}
+#ex{color:var(--sub);min-height:24px;text-align:right;font-size:18px;word-break:break-all}
+#res{text-align:right;font-size:48px;word-break:break-all;line-height:1.1;min-height:56px}
+#res.sm{font-size:30px}
+.tag{position:absolute;left:6px;top:8px;color:var(--sub);font-size:13px}
+.mrow,.sci,.keys{display:grid;gap:8px;margin-top:8px}
+.mrow{grid-template-columns:repeat(4,1fr)}
+.sci{grid-template-columns:repeat(5,1fr);display:none}
+.sci.on{display:grid}
+.keys{grid-template-columns:repeat(4,1fr);margin-bottom:10px}
+.k{border:0;border-radius:18px;padding:0;height:52px;font-size:22px;background:var(--key);color:var(--tx)}
+.k.fn{background:var(--fn)}.k.op{background:var(--ac);color:#000}.k.eq{background:var(--eq);color:#000}
+.k.s{height:38px;font-size:15px}.k.on{outline:2px solid var(--ac)}
+.k:active{opacity:.6}
+.card{background:var(--panel);border-radius:16px;padding:12px;margin-bottom:12px}
+.card h3{margin:0 0 6px;font-size:16px}
+label{display:block;font-size:13px;color:var(--sub);margin:8px 0 4px}
+input,select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--fn);background:var(--key);color:var(--tx);font-size:17px}
+.sub{color:var(--sub);font-size:14px}.out{margin-top:10px;font-size:17px;line-height:1.6}
+.hi{padding:12px 4px;border-bottom:1px solid var(--key)}.hi .big{font-size:26px}
+.urow{display:grid;grid-template-columns:1fr 1.3fr;gap:8px;margin-bottom:10px}
+a{color:var(--ac)}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--fn);color:var(--tx);padding:8px 16px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.on{opacity:1}
+</style></head><body>
+<div class="app">
+<div class="top" id="top"></div>
+<section class="view on" id="v-calc">
+ <div class="disp"><span class="tag"><span id="dg">DEG</span> <b id="mm"></b></span><div id="ex"></div><div id="res">0</div></div>
+ <div class="mrow" id="mrow"></div>
+ <div class="sci" id="sci"></div>
+ <div class="keys" id="keys"></div>
+</section>
+<section class="view" id="v-hist"><div id="hl"></div><button class="pill" id="hc" style="margin:12px 0">History clear karo</button></section>
+<section class="view" id="v-units"><div class="top" id="ut"></div><div id="ur"></div></section>
+<section class="view" id="v-cur"><div id="cr"></div><p class="sub" id="cs"></p><p class="sub"><a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">Rates By Exchange Rate API</a></p></section>
+<section class="view" id="v-tools"></section>
 </div>
+<div id="toast"></div>
 <script>
-const layout=[["C","fn"],["⌫","fn"],["%","fn"],["÷","op"],
-["7"],["8"],["9"],["×","op"],
-["4"],["5"],["6"],["−","op"],
-["1"],["2"],["3"],["+","op"],
-["0"],["."],["=","eq"]];
-let expr="";
-const out=document.getElementById("out"),ex=document.getElementById("expr");
-const ops="+−×÷";
-function show(){out.textContent=expr||"0";}
-function calc(){
-  try{
-    let s=expr.replace(/×/g,"*").replace(/÷/g,"/").replace(/−/g,"-").replace(/%/g,"/100");
-    if(!/^[0-9+\-*\/.() ]+$/.test(s))return;
-    let r=Function("return "+s)();
-    if(!isFinite(r))throw 0;
-    ex.textContent=expr+" =";
-    expr=String(+r.toFixed(10));
-  }catch(e){expr="";ex.textContent="Error";}
-  show();
-}
-function press(k){
-  if(k==="C"){expr="";ex.textContent="";}
-  else if(k==="⌫"){expr=expr.slice(0,-1);}
-  else if(k==="="){return calc();}
-  else if(ops.includes(k)){
-    if(!expr)return;
-    if(ops.includes(expr.slice(-1)))expr=expr.slice(0,-1);
-    expr+=k;
-  } else expr+=k;
-  show();
-}
-const box=document.getElementById("keys");
-layout.forEach(([k,c])=>{
-  const b=document.createElement("button");
-  b.textContent=k;if(c)b.className=c;
-  b.onclick=()=>press(k);
-  box.appendChild(b);
-});
-</script><script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script></body></html>
+//LOGIC-START
+let DEG=true;
+const FN=['sin','cos','tan','asin','acos','atan','log','ln','√'];
+function fact(n){if(n<0||n!==Math.floor(n)||n>170)throw 0;let r=1;for(let k=2;k<=n;k++)r*=k;return r;}
+function F(n,a){const k=DEG?Math.PI/180:1;let r;
+ switch(n){case'sin':r=Math.sin(a*k);break;case'cos':r=Math.cos(a*k);break;
+ case'tan':if(Math.abs(Math.cos(a*k))<1e-12)throw 0;r=Math.tan(a*k);break;
+ case'asin':if(Math.abs(a)>1)throw 0;r=Math.asin(a)/k;break;
+ case'acos':if(Math.abs(a)>1)throw 0;r=Math.acos(a)/k;break;
+ case'atan':r=Math.atan(a)/k;break;
+ case'log':if(a<=0)throw 0;r=Math.log10(a);break;
+ case'ln':if(a<=0)throw 0;r=Math.log(a);break;
+ case'√':if(a<0)throw 0;r=Math.sqrt(a);break;}
+ if(['sin','cos','tan'].includes(n)&&Math.abs(r)<1e-12)r=0;
+ return r;}
+function evaluate(s){
+ const t=s.match(/\d+\.?\d*|\.\d+|asin|acos|atan|sin|cos|tan|log|ln|π|e|√|[+−×÷^%!()*\/-]/g)||[];
+ if(t.join('').length!==s.length)throw 0;
+ let i=0;const pk=()=>t[i],nx=()=>t[i++];
+ const sf=x=>x!==undefined&&(/^[\d.]/.test(x)||x==='('||x==='π'||x==='e'||FN.includes(x));
+ const cl=()=>{if(pk()===')')nx();else if(pk()!==undefined)throw 0;};
+ function pe(){let v=pt();while(pk()==='+'||pk()==='−'||pk()==='-'){const o=nx(),r=pt();v=o==='+'?v+r:v-r;}return v;}
+ function pt(){let v=pu();for(;;){const p=pk();if(p==='×'||p==='*'){nx();v*=pu();}else if(p==='÷'||p==='/'){nx();const d=pu();if(d===0)throw 0;v/=d;}else if(sf(p))v*=pu();else break;}return v;}
+ function pu(){const p=pk();if(p==='−'||p==='-'){nx();return -pu();}if(p==='+'){nx();return pu();}return pw();}
+ function pw(){const b=pq();if(pk()==='^'){nx();return Math.pow(b,pu());}return b;}
+ function pq(){let v=pr();for(;;){if(pk()==='!'){nx();v=fact(v);}else if(pk()==='%'){nx();v/=100;}else break;}return v;}
+ function pr(){const x=nx();if(x===undefined)throw 0;
+  if(/^[\d.]/.test(x))return parseFloat(x);
+  if(x==='π')return Math.PI;if(x==='e')return Math.E;
+  if(x==='('){const v=pe();cl();return v;}
+  if(FN.includes(x)){if(nx()!=='(')throw 0;const a=pe();cl();return F(x,a);}
+  throw 0;}
+ const v=pe();if(i<t.length||!isFinite(v))throw 0;return v;}
+function raw(n){n=Number(n.toPrecision(12));if(Math.abs(n)>=1e15||(n!==0&&Math.abs(n)<1e-9))return null;return n.toFixed(12).replace(/\.?0+$/,'');}
+function disp(n){n=Number(n.toPrecision(12));if(Math.abs(n)>=1e15||(n!==0&&Math.abs(n)<1e-9))return n.toExponential(8).replace(/\.?0+e/,'e');return n.toLocaleString('en-IN',{maximumFractionDigits:10});}
+const UNITS={
+Length:{f:{Millimeter:.001,Centimeter:.01,Meter:1,Kilometer:1000,Inch:.0254,Foot:.3048,Yard:.9144,Mile:1609.344,'Nautical mile':1852},d:['Inch','Meter','Kilometer']},
+Area:{f:{'Sq. cm':1e-4,'Sq. meter':1,'Sq. km':1e6,Hectare:1e4,Acre:4046.8564224,'Sq. foot':.09290304,'Sq. yard':.83612736,'Sq. inch':.00064516,'Sq. mile':2589988.110336},d:['Sq. foot','Sq. meter','Acre']},
+Volume:{f:{Milliliter:.001,Liter:1,'Cubic meter':1000,'Teaspoon (US)':.00492892159375,'Tablespoon (US)':.01478676478125,'Cup (US)':.2365882365,'Fluid oz (US)':.0295735295625,'Gallon (US)':3.785411784,'Gallon (UK)':4.54609},d:['Liter','Milliliter','Gallon (US)']},
+Time:{f:{Millisecond:.001,Second:1,Minute:60,Hour:3600,Day:86400,Week:604800,'Year (365 d)':31536000},d:['Hour','Minute','Second']},
+Temperature:{f:{Celsius:1,Fahrenheit:1,Kelvin:1},d:['Celsius','Fahrenheit','Kelvin']},
+Weight:{f:{Milligram:1e-6,Gram:.001,Kilogram:1,Quintal:100,Tonne:1000,Ounce:.028349523125,Pound:.45359237,Stone:6.35029318},d:['Kilogram','Gram','Pound']},
+Speed:{f:{'m/s':1,'km/h':1000/3600,mph:.44704,Knot:1852/3600,'ft/s':.3048},d:['km/h','m/s','mph']}};
+function conv(c,a,b,v){
+ if(c==='Temperature'){const x=a==='Celsius'?v:a==='Fahrenheit'?(v-32)*5/9:v-273.15;return b==='Celsius'?x:b==='Fahrenheit'?x*9/5+32:x+273.15;}
+ return v*UNITS[c].f[a]/UNITS[c].f[b];}
+function fmtU(v){return String(Number(v.toPrecision(10)));}
+//LOGIC-END
+const $=id=>document.getElementById(id);
+const ls=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k));localStorage.setItem(k,JSON.stringify(v));}catch(e){return null;}};
+const vib=()=>{try{navigator.vibrate&&navigator.vibrate(8);}catch(e){}};
+const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),1200);};
+const mk=(p,tag,cls,txt,fn)=>{const b=document.createElement(tag);b.className=cls;b.textContent=txt;if(fn)b.onclick=fn;p.appendChild(b);return b;};
+let E='',done=false,lastRaw='',shown='',bad=false,INV=false,hasM=false,M=0,hist=ls('calc_hist')||[];
+const ex=$('ex'),res=$('res');
+const MAP={sin:()=>INV?'asin(':'sin(',cos:()=>INV?'acos(':'cos(',tan:()=>INV?'atan(':'tan(',log:()=>INV?'10^(':'log(',ln:()=>INV?'e^(':'ln(','√':()=>'√(','x²':()=>'^2','xʸ':()=>'^','x!':()=>'!'};
+function draw(){const t=bad?'Error':done?shown:(E||'0');res.textContent=t;res.className=t.length>11?'sm':'';$('mm').textContent=hasM?'M':'';$('dg').textContent=DEG?'DEG':'RAD';}
+function add(k){
+ const L=E.slice(-1),isOp=/^[+−×÷^]$/.test(k);
+ if(done){done=false;ex.textContent='';if(!(isOp||k==='%'||k==='!'||k==='^2'))E='';}
+ if(/^\d$/.test(k)){E+=k;return;}
+ if(k==='.'){const m=E.match(/[\d.]*$/)[0];if(m.includes('.'))return;E+=m===''?'0.':'.';return;}
+ if(isOp){if(E===''){if(k==='−')E='−';return;}
+  if(E==='−')return;
+  if(E.endsWith('(')){if(k==='−')E+=k;return;}
+  if(/[+−×÷^]/.test(L)){if(k==='−'&&/[×÷^]/.test(L)){E+=k;return;}E=E.slice(0,-1)+k;return;}
+  E+=k;return;}
+ if(k==='%'||k==='!'||k==='^2'){if(/[\d)πe%!]$/.test(E))E+=k;return;}
+ if(k===')'){const o=(E.match(/\(/g)||[]).length,c=(E.match(/\)/g)||[]).length;if(o>c&&!/[(+−×÷^]$/.test(E))E+=k;return;}
+ E+=k;}
+function eq(){if(!E||done)return;let v;
+ try{v=evaluate(E);}catch(x){bad=true;E='';return;}
+ const r=raw(v),d=disp(v);hist.unshift({e:E,r:r,d:d});hist=hist.slice(0,50);ls('calc_hist',hist);
+ ex.textContent=E+' =';lastRaw=r;shown=d;E=r||'';done=true;}
+function key(k){vib();bad=false;
+ if(k==='AC'){E='';done=false;ex.textContent='';}
+ else if(k==='⌫'){if(done){done=false;ex.textContent='';}E=E.replace(/(asin\(|acos\(|atan\(|sin\(|cos\(|tan\(|log\(|ln\(|√\(|.)$/,'');}
+ else if(k==='=')eq();
+ else if(k==='INV'){INV=!INV;sciLabels();}
+ else if(k==='DEG'){DEG=!DEG;sciLabels();}
+ else if(k==='Sci')$('sci').classList.toggle('on');
+ else add(MAP[k]?MAP[k]():k);
+ draw();}
+function mem(k){vib();let v=NaN;try{v=done?Number(lastRaw):evaluate(E||'0');}catch(e){}
+ if(k==='MC'){hasM=false;M=0;}
+ else if(k==='MR'){if(hasM){if(done){done=false;ex.textContent='';E='';}E=E.replace(/[\d.]*$/,raw(M)||String(M));}}
+ else if(isFinite(v)){M=k==='M+'?M+v:M-v;hasM=true;}
+ draw();}
+function sciLabels(){document.querySelectorAll('#sci button').forEach(b=>{const k=b.dataset.k,I=INV;
+ b.textContent=k==='DEG'?(DEG?'DEG':'RAD'):I&&k==='sin'?'sin⁻¹':I&&k==='cos'?'cos⁻¹':I&&k==='tan'?'tan⁻¹':I&&k==='log'?'10ˣ':I&&k==='ln'?'eˣ':k;
+ b.classList.toggle('on',k==='INV'&&I);});}
+['MC','MR','M+','M−'].forEach(k=>mk($('mrow'),'button','k s fn',k,()=>mem(k==='M−'?'M-':k)));
+['INV','DEG','x!','(',')','sin','cos','tan','log','ln','x²','xʸ','π','e','√'].forEach(k=>{const b=mk($('sci'),'button','k s',k,()=>key(k));b.dataset.k=k;});
+[['AC','fn'],['%','fn'],['⌫','fn'],['÷','op'],['7'],['8'],['9'],['×','op'],['4'],['5'],['6'],['−','op'],['1'],['2'],['3'],['+','op'],['Sci','fn'],['0'],['.'],['=','eq']].forEach(([k,c])=>mk($('keys'),'button','k '+(c||''),k,()=>key(k)));
+res.onclick=()=>{const t=done?lastRaw:E;if(!t)return;try{navigator.clipboard.writeText(t).then(()=>toast('Copy ho gaya'),()=>toast('Copy nahi hua'));}catch(e){toast('Copy nahi hua');}};
+const VIEWS=[['calc','Calc'],['hist','History'],['units','Units'],['cur','Currency'],['tools','Tools']];
+const THEMES=['dark','light','amoled'];
+VIEWS.forEach(([v,n])=>{const b=mk($('top'),'button','pill',n,()=>show(v));b.id='p-'+v;});
+mk($('top'),'button','pill','Theme',()=>{const c=document.documentElement.dataset.theme;const n=THEMES[(THEMES.indexOf(c)+1)%3];document.documentElement.dataset.theme=n;ls('calc_theme',n);});
+const T=ls('calc_theme');if(THEMES.includes(T))document.documentElement.dataset.theme=T;
+let built={};
+function show(v){VIEWS.forEach(([x])=>{$('v-'+x).classList.toggle('on',x===v);$('p-'+x).classList.toggle('on',x===v);});
+ if(v==='hist')renderHist();if(v==='units'&&!built.u){built.u=1;buildUnits();}if(v==='cur'){if(!built.c){built.c=1;buildCur();}loadRates();}if(v==='tools'&&!built.t){built.t=1;buildTools();}}
+function renderHist(){const b=$('hl');b.innerHTML='';
+ if(!hist.length){mk(b,'p','sub','Abhi koi history nahi hai');return;}
+ hist.forEach(h=>{const d=mk(b,'div','hi','',()=>{E=h.r||'';done=false;ex.textContent='';show('calc');draw();});mk(d,'div','sub',h.e+' =');mk(d,'div','big',h.d);});}
+$('hc').onclick=()=>{hist=[];ls('calc_hist',hist);renderHist();};
+/* Units */
+let cat='Length',usrc=0,uS=[],uI=[];
+function buildUnits(){Object.keys(UNITS).forEach(c=>mk($('ut'),'button','pill',c,()=>{cat=c;fillUnits();}));
+ for(let i=0;i<3;i++){const r=mk($('ur'),'div','card','');const s=document.createElement('select'),n=document.createElement('input');n.inputMode='decimal';
+  s.onchange=()=>calcU();n.oninput=()=>{usrc=i;calcU();};n.onfocus=()=>{usrc=i;};r.appendChild(s);r.appendChild(n);uS.push(s);uI.push(n);}
+ fillUnits();}
+function fillUnits(){[...$('ut').children].forEach(b=>b.classList.toggle('on',b.textContent===cat));
+ const names=Object.keys(UNITS[cat].f);usrc=0;
+ uS.forEach((s,i)=>{s.innerHTML='';names.forEach(n=>{const o=document.createElement('option');o.value=o.textContent=n;s.appendChild(o);});s.value=UNITS[cat].d[i];uI[i].value=i===0?'1':'';});calcU();}
+function calcU(){const v=parseFloat(uI[usrc].value.replace(/,/g,''));
+ uI.forEach((n,j)=>{if(j!==usrc)n.value=isNaN(v)?'':fmtU(conv(cat,uS[usrc].value,uS[j].value,v));});}
+/* Currency */
+const CODES=['INR','USD','EUR','GBP','AED','SAR','JPY','CNY','AUD','CAD','SGD','CHF','NPR','BDT','PKR','LKR','MYR','THB','KWD','QAR','ZAR','NZD','HKD','KRW','IDR','TRY'];
+let R=null,csrc=0,cS=[],cI=[];
+function buildCur(){['INR','USD','EUR'].forEach((d,i)=>{const r=mk($('cr'),'div','card','');const s=document.createElement('select'),n=document.createElement('input');n.inputMode='decimal';
+ CODES.forEach(c=>{const o=document.createElement('option');o.value=o.textContent=c;s.appendChild(o);});s.value=d;n.value=i===0?'100':'';
+ s.onchange=calcC;n.oninput=()=>{csrc=i;calcC();};n.onfocus=()=>{csrc=i;};r.appendChild(s);r.appendChild(n);cS.push(s);cI.push(n);});}
+function calcC(){if(!R)return;const v=parseFloat(cI[csrc].value.replace(/,/g,'')),a=R[cS[csrc].value];
+ cI.forEach((n,j)=>{if(j===csrc)return;const b=R[cS[j].value];n.value=(isNaN(v)||!a||!b)?'':String(Number((v/a*b).toFixed(4)));});}
+async function loadRates(){const c=ls('calc_rates');let ok=false;
+ if(c&&c.r){R=c.r;}
+ if(!c||!c.t||Date.now()-c.t>6*36e5){try{const j=await(await fetch('https://open.er-api.com/v6/latest/USD')).json();
+  if(j&&j.result==='success'&&j.rates){R=j.rates;ls('calc_rates',{r:R,t:Date.now(),u:j.time_last_update_unix});ok=true;}}catch(e){}}
+ else ok=true;
+ const u=(ls('calc_rates')||{}).u;
+ $('cs').textContent=!R?'Internet chahiye: rates load nahi hue. Net on karke dobara kholo.':(ok?'Rates updated: ':'Offline: purane rates, ')+(u?new Date(u*1000).toLocaleString('en-IN'):'');
+ calcC();}
+/* Tools */
+function buildTools(){const v=$('v-tools');
+ const f=(id,l,d)=>`<label>${l}</label><input id="${id}" inputmode="decimal" value="${d||''}">`;
+ v.innerHTML=`<div class="card"><h3>GST</h3>${f('ga','Amount (₹)')}${f('gr','GST %','18')}<label>Type</label><select id="gm"><option value="a">GST jodo (add)</option><option value="r">GST hatao (remove)</option></select><div class="out" id="go"></div></div>
+<div class="card"><h3>EMI</h3>${f('ep','Loan amount (₹)')}${f('er','Interest % per year')}${f('et','Time')}<label>Time unit</label><select id="eu"><option value="12">Years</option><option value="1">Months</option></select><div class="out" id="eo"></div></div>
+<div class="card"><h3>Discount</h3>${f('dp','Price (₹)')}${f('dd','Discount %')}<div class="out" id="do"></div></div>
+<div class="card"><h3>Percentage</h3>${f('p1x','X')}${f('p1y','Y')}<div class="out" id="p1o"></div><hr>${f('p3x','Purana value')}${f('p3y','Naya value')}<div class="out" id="p3o"></div></div>`;
+ v.addEventListener('input',tl);v.addEventListener('change',tl);tl();}
+function tl(){const n=id=>{const x=parseFloat($(id).value);return isNaN(x)?null:x;};
+ const m=x=>'₹'+x.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const p=x=>String(Number(x.toPrecision(8)));
+ let a=n('ga'),r=n('gr');
+ if(a===null||r===null)$('go').textContent='—';else{let base,g;if($('gm').value==='a'){base=a;g=a*r/100;}else{base=a*100/(100+r);g=a-base;}
+  $('go').innerHTML=`Base: ${m(base)}<br>GST: ${m(g)} (CGST ${m(g/2)} + SGST ${m(g/2)})<br><b>Total: ${m(base+g)}</b>`;}
+ const P=n('ep'),Y=n('er'),N=n('et');
+ if(P===null||Y===null||N===null||N<=0)$('eo').textContent='—';else{const k=N*Number($('eu').value),i=Y/1200;
+  const e=i===0?P/k:P*i*Math.pow(1+i,k)/(Math.pow(1+i,k)-1);
+  $('eo').innerHTML=`<b>Monthly EMI: ${m(e)}</b><br>Total interest: ${m(e*k-P)}<br>Total payment: ${m(e*k)}`;}
+ const dp=n('dp'),dd=n('dd');
+ $('do').innerHTML=(dp===null||dd===null)?'—':`Bachat: ${m(dp*dd/100)}<br><b>Final price: ${m(dp-dp*dd/100)}</b>`;
+ const x=n('p1x'),y=n('p1y');
+ $('p1o').innerHTML=(x===null||y===null)?'—':`${p(x)}% of ${p(y)} = <b>${p(x*y/100)}</b><br>${p(x)} is <b>${y===0?'—':p(x/y*100)}%</b> of ${p(y)}`;
+ const o=n('p3x'),w=n('p3y');
+ $('p3o').innerHTML=(o===null||w===null||o===0)?'—':`Change: <b>${p((w-o)/Math.abs(o)*100)}%</b> (${w>=o?'increase':'decrease'})`;}
+show('calc');draw();sciLabels();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
+</script></body></html>
